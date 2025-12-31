@@ -143,7 +143,7 @@ export default async function handler(req, res) {
     const F_COL = {
       name: 90,
       dob: 220,
-      relation: 305,
+      relation: 285,
       occupation: 355,
       qualification: 425,
       bloodGroup: 495,

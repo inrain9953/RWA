@@ -73,6 +73,9 @@ export default function Home() {
       formData.append("photo", photoBlob, "photo.jpg");
     }
 
+    const fileName = formData.get("name");
+    const safeFileName = fileName.replace(/\s+/g, "_");
+
     const res = await fetch("/api/generate-pdf", {
       method: "POST",
       body: formData,
@@ -82,7 +85,7 @@ export default function Home() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "RWA_Membership_Form.pdf";
+    a.download = `${safeFileName}_RWA_Membership_Form.pdf`;
     a.click();
 
     setLoading(false);
@@ -101,7 +104,7 @@ export default function Home() {
             <button
               type="button"
               onClick={openCamera}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-700"
             >
               📷 Open Camera
             </button>
@@ -267,6 +270,10 @@ export default function Home() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="mt-8">
+        <p className="text-center text-sm text-gray-400">Developed by: <a className="hover:text-gray-700" href="https://pixelavii.netlify.app" target="_blank" rel="noopener noreferrer">Avinash Chaurasia</a></p>
       </div>
     </div>
   );
