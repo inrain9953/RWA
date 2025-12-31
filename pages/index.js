@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,11 @@ export default function Home() {
     bloodGroup: "",
   };
   const [family, setFamily] = useState([emptyMember]);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [photoBlob, setPhotoBlob] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const addFamily = () => {
     setFamily([...family, emptyMember]);
@@ -27,21 +32,50 @@ export default function Home() {
     setFamily(updated);
   };
 
+  const openCamera = async () => {
+    setCameraOpen(true);
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    videoRef.current.srcObject = stream;
+  };
+
+  const closeCamera = () => {
+    const stream = videoRef.current?.srcObject;
+    stream?.getTracks().forEach((track) => track.stop());
+    setCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      setPhotoBlob(blob);
+      setPhotoPreview(URL.createObjectURL(blob));
+    }, "image/jpeg");
+
+    closeCamera();
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
 
-    const formData = Object.fromEntries(new FormData(e.target));
+    const formData = new FormData(e.target);
+    formData.append("family", JSON.stringify(family));
 
-    const payload = {
-      ...formData,
-      family,
-    };
+    if (photoBlob) {
+      formData.append("photo", photoBlob, "photo.jpg");
+    }
 
     const res = await fetch("/api/generate-pdf", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: formData,
     });
 
     const blob = await res.blob();
@@ -60,6 +94,59 @@ export default function Home() {
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
           RWA Membership Application Form
         </h2>
+        <div className="mt-4">
+          <Label>Applicant Photo</Label>
+
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={openCamera}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            >
+              📷 Open Camera
+            </button>
+
+            {photoPreview && (
+              <img
+                src={photoPreview}
+                alt="Captured"
+                className="w-24 h-28 object-cover border rounded-md"
+              />
+            )}
+          </div>
+        </div>
+        {cameraOpen && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 w-96">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full rounded-md"
+              />
+
+              <canvas ref={canvasRef} className="hidden" />
+
+              <div className="flex justify-between mt-4">
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md"
+                >
+                  Capture
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeCamera}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Applicant Details */}
